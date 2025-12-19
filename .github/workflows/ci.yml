@@ -25,7 +25,7 @@ on:
 
 env:
   MLFLOW_TRACKING_URI: file:./mlruns
-  DOCKER_IMAGE: awakao502/bmw-mlflow-ci
+  DOCKER_IMAGE: awaka0502/bmw-mlflow-ci
 
 jobs:
   # ============================================================================
