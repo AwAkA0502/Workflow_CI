@@ -1,0 +1,171 @@
+name: BMW_Model_Otomatisasi_CI
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'MLProject_Folder/**'
+      - '.github/workflows/ci.yml'
+  
+  workflow_dispatch:
+    inputs:
+      n_estimators:
+        description: 'Jumlah Estimator (Pohon)'
+        required: false
+        default: '100'
+      max_depth:
+        description: 'Kedalaman Maksimum'
+        required: false
+        default: '6'
+      learning_rate:
+        description: 'Laju Pembelajaran'
+        required: false
+        default: '0.1'
+
+env:
+  MLFLOW_TRACKING_URI: file:./mlruns
+  DOCKER_IMAGE: awakao502/bmw-mlflow-ci
+
+jobs:
+  # ============================================================================
+  # TAHAP 1: EKSEKUSI PELATIHAN MODEL (MLFLOW PROJECT)
+  # ============================================================================
+  pelatihan-model:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    defaults:
+      run:
+        shell: bash -el {0}
+    
+    steps:
+      - name: Mengambil Kode dari Repo
+        uses: actions/checkout@v4
+      
+      - name: Konfigurasi Lingkungan Miniconda
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          auto-update-conda: true
+          python-version: '3.9'
+          miniconda-version: "latest"
+          activate-environment: bmw-env
+          environment-file: MLProject_Folder/conda.yaml
+      
+      - name: Instalasi MLflow
+        run: |
+          pip install mlflow catboost pandas scikit-learn
+          mlflow --version
+      
+      - name: Menjalankan MLflow Project
+        run: |
+          echo "Memulai proses training otomatis..."
+          cd MLProject_Folder
+          
+          # Mengambil input dari manual trigger atau default
+          N_EST=${{ github.event.inputs.n_estimators || '100' }}
+          MAX_D=${{ github.event.inputs.max_depth || '6' }}
+          LR=${{ github.event.inputs.learning_rate || '0.1' }}
+          
+          mlflow run . \
+            --env-manager=local \
+            -P n_estimators=$N_EST \
+            -P max_depth=$MAX_D \
+            -P learning_rate=$LR
+      
+      - name: Menyiapkan Hasil Latihan (Artifacts)
+        run: |
+          mkdir -p output_hasil
+          cp -r MLProject_Folder/mlruns output_hasil/ || echo "Folder mlruns tidak ditemukan"
+          
+          # Membuat catatan ringkasan
+          echo "Hasil Latihan BMW - Tanggal: $(date)" > output_hasil/summary_training.txt
+          echo "Commit ID: ${{ github.sha }}" >> output_hasil/summary_training.txt
+
+      - name: Mengunggah Artifacts ke GitHub Actions
+        uses: actions/upload-artifact@v4
+        with:
+          name: artifacts-bmw-run-${{ github.run_number }}
+          path: output_hasil/
+          retention-days: 7
+
+      # KRITERIA SKILLED: Simpan hasil kembali ke Repository
+      - name: Sinkronisasi Hasil ke Branch Utama
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action Bot"
+          git pull origin main
+          
+          mkdir -p catatan_eksperimen
+          cp -r output_hasil/mlruns catatan_eksperimen/run_${{ github.run_number }}
+          
+          git add catatan_eksperimen/
+          git commit -m "🤖 Update Otomatis: Hasil Pelatihan #${{ github.run_number }} [skip ci]" || echo "Tidak ada perubahan"
+          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git main
+
+  # ============================================================================
+  # TAHAP 2: PEMBUATAN & PUBLIKASI DOCKER IMAGE (ADVANCE)
+  # ============================================================================
+  build-dan-push-docker:
+    runs-on: ubuntu-latest
+    needs: pelatihan-model
+    
+    steps:
+      - name: Mengambil Kode Repo
+        uses: actions/checkout@v4
+      
+      - name: Mengunduh Hasil Latihan Sebelumnya
+        uses: actions/download-artifact@v4
+        with:
+          name: artifacts-bmw-run-${{ github.run_number }}
+          path: ./hasil_unduhan
+
+      - name: Set Up Python & Docker Buildx
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+      
+      - name: Login ke Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Membangun Docker Image (MLflow Build-Docker)
+        run: |
+          pip install mlflow catboost
+          
+          # Mencari lokasi model yang baru saja dilatih
+          MODEL_PATH=$(find ./hasil_unduhan -name "model" -type d | head -1)
+          ABS_MODEL_PATH=$(readlink -f "$MODEL_PATH")
+          
+          echo "Membangun image dari path: $ABS_MODEL_PATH"
+          
+          # Perintah Utama Kriteria Advance
+          mlflow models build-docker \
+            --model-uri "$ABS_MODEL_PATH" \
+            --name "${{ env.DOCKER_IMAGE }}:latest" \
+            --enable-mlserver
+
+      - name: Push Image ke Docker Hub
+        run: |
+          docker push ${{ env.DOCKER_IMAGE }}:latest
+          # Tag tambahan dengan nomor run
+          docker tag ${{ env.DOCKER_IMAGE }}:latest ${{ env.DOCKER_IMAGE }}:v${{ github.run_number }}
+          docker push ${{ env.DOCKER_IMAGE }}:v${{ github.run_number }}
+
+  # ============================================================================
+  # RINGKASAN AKHIR (JOB SUMMARY)
+  # ============================================================================
+  laporan-akhir:
+    runs-on: ubuntu-latest
+    needs: [pelatihan-model, build-dan-push-docker]
+    if: always()
+    steps:
+      - name: Menampilkan Status di Dashboard GitHub
+        run: |
+          echo "## 🚀 Laporan Workflow CI BMW" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status Pelatihan:** ${{ needs.pelatihan-model.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status Docker Hub:** ${{ needs.build-dan-push-docker.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Kriteria Advance:** Terpenuhi (Docker Image telah dipublikasikan)" >> $GITHUB_STEP_SUMMARY

@@ -1,0 +1,14 @@
+name: bmw_prediction_env
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.9
+  - pip
+  - pip:
+      - mlflow==2.10.0
+      - catboost
+      - pandas
+      - numpy
+      - scikit-learn
+      - matplotlib
