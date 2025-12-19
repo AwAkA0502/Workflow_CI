@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - 'MLProject_Folder/**'
+      - 'MLProject/**'
       - '.github/workflows/ci.yml'
   
   workflow_dispatch:
@@ -61,7 +61,7 @@ jobs:
       - name: Menjalankan MLflow Project
         run: |
           echo "Memulai proses training otomatis..."
-          cd MLProject_Folder
+          cd MLProject
           
           # Mengambil input dari manual trigger atau default
           N_EST=${{ github.event.inputs.n_estimators || '100' }}
@@ -77,7 +77,7 @@ jobs:
       - name: Menyiapkan Hasil Latihan (Artifacts)
         run: |
           mkdir -p output_hasil
-          cp -r MLProject_Folder/mlruns output_hasil/ || echo "Folder mlruns tidak ditemukan"
+          cp -r MLProject/mlruns output_hasil/ || echo "Folder mlruns tidak ditemukan"
           
           # Membuat catatan ringkasan
           echo "Hasil Latihan BMW - Tanggal: $(date)" > output_hasil/summary_training.txt
