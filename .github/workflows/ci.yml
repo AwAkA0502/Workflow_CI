@@ -51,7 +51,7 @@ jobs:
           python-version: '3.9'
           miniconda-version: "latest"
           activate-environment: bmw-env
-          environment-file: MLProject_Folder/conda.yaml
+          environment-file: MLProject/conda.yaml
       
       - name: Instalasi MLflow
         run: |
