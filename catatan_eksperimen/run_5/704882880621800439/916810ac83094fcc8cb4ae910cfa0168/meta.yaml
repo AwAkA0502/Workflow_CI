@@ -1,0 +1,15 @@
+artifact_uri: file:///home/runner/work/Workflow_CI/Workflow_CI/MLProject/mlruns/704882880621800439/916810ac83094fcc8cb4ae910cfa0168/artifacts
+end_time: 1766159968341
+entry_point_name: ''
+experiment_id: '704882880621800439'
+lifecycle_stage: active
+run_id: 916810ac83094fcc8cb4ae910cfa0168
+run_name: unique-donkey-889
+run_uuid: 916810ac83094fcc8cb4ae910cfa0168
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1766159964576
+status: 3
+tags: []
+user_id: runner
