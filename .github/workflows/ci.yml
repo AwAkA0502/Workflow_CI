@@ -69,10 +69,11 @@ jobs:
           LR=${{ github.event.inputs.learning_rate || '0.1' }}
           
           mlflow run . \
+            --experiment-name "BMW_Price_Prediction_Workflow" \
             --env-manager=local \
-            -P n_estimators=$N_EST \
-            -P max_depth=$MAX_D \
-            -P learning_rate=$LR
+            -P n_estimators=${{ github.event.inputs.n_estimators || '100' }} \
+            -P max_depth=${{ github.event.inputs.max_depth || '6' }} \
+            -P learning_rate=${{ github.event.inputs.learning_rate || '0.1' }}
       
       - name: Menyiapkan Hasil Latihan (Artifacts)
         run: |
