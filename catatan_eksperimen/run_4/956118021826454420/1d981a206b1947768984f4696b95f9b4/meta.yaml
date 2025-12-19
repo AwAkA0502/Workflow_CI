@@ -1,0 +1,15 @@
+artifact_uri: file:///home/runner/work/Workflow_CI/Workflow_CI/MLProject/mlruns/956118021826454420/1d981a206b1947768984f4696b95f9b4/artifacts
+end_time: 1766158073796
+entry_point_name: ''
+experiment_id: '956118021826454420'
+lifecycle_stage: active
+run_id: 1d981a206b1947768984f4696b95f9b4
+run_name: classy-deer-553
+run_uuid: 1d981a206b1947768984f4696b95f9b4
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1766158070614
+status: 3
+tags: []
+user_id: runner
